@@ -8,6 +8,8 @@ package {
 	import flash.display.StageScaleMode;
 	import flash.display.Bitmap;
 	import flash.display.Loader;
+        import flash.display.BitmapData;
+        import flash.display.Matrix;
 	import flash.net.FileReferenceList;
 	import flash.net.FileReference;
 	import flash.net.FileFilter;
@@ -1318,9 +1320,46 @@ package {
 			this.Debug("Event: uploadComplete : Upload cycle complete.");
 			ExternalCall.UploadComplete(this.uploadComplete_Callback, jsFileObj);
 		}
+		private function imageCreated(e:FlexEvent):void {
+			this.Debug("图片绘制成功");
+		}
 		private function imgLoadHandle(e:Event):void {
+			var bitmap:Bitmap = Bitmap(e.target.content);
+			var image:Image = new Image();
+			//image.addEventListener(FlexEvent.CREATION_COMPLETE,imageCreated);
+			image.source = bitmap;
 			this.Debug("图片加载成功！");
-		
+			var bd : BitmapData = new BitmapData( 100, 100 );
+                        var m : Matrix = new Matrix();
+                        bd.draw( image, m );
+			var jpegEnc:JPEGEncoder = new JPEGEncoder(80);
+                        var jpegData:ByteArray = jpegEnc.encode(bd);
+                        var req:URLRequest = new URLRequest("upload2.php");
+                        req.contentType = 'applicatoin/octet-stream';
+                        req.method = URLRequestMethod.POST;
+                        req.data = jpegData;
+                        var arrHead:Array = new Array();
+                        arrHead.push(new URLRequestHeader("fileName", encodeURIComponent(fileUpload.name)));
+                        arrHead.push(new URLRequestHeader("width", "100"));
+                        arrHead.push(new URLRequestHeader("height", "100"));
+                        req.requestHeaders = arrHead;
+                        var loader:URLLoader = new URLLoader();
+                        loader.addEventListener(Event.COMPLETE, uploadComplete);
+                        loader.addEventListener(IOErrorEvent.IO_ERROR, function(evt:IOErrorEvent):void{
+                        showError("上传图片失败！错误信息：" + evt.text);
+                        });
+                        loader.addEventListener(SecurityErrorEvent.SECURITY_ERROR, function(evt:SecurityErrorEvent):void{
+                        showError("上传图片失败！错误信息：" + evt.text);
+                        });
+                        try
+                        {
+                            loader.load(req);
+                        }
+                        catch (error:Error)
+                        {
+                            showError("上传失败！" + error.message);
+                        }
+
 		}
 		
 		private function fileLoadHandle(e:Event):void {
@@ -1329,7 +1368,7 @@ package {
 			imageloader.loadBytes((e.target as FileReference).data);
 			this.Debug("我擦");
 		}
-		private function compress(fr:FileReference):void {
+		private function compressImg(fr:FileReference):void {
 			this.Debug(fr.size+"");
 			this.Debug("呵呵呵");
 			fr.load();
@@ -1349,7 +1388,7 @@ package {
 			if((file_item.file_reference.size/1024)>40) {
 				
 				this.Debug("要压缩了，必须的！");
-				this.compress(file_item.file_reference);
+				this.compressImg(file_item.file_reference);
 				return 100;
 			}
 			
