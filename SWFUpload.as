@@ -6,6 +6,8 @@ package {
 	import flash.display.Sprite;
 	import flash.display.StageAlign;
 	import flash.display.StageScaleMode;
+	import flash.display.Bitmap;
+	import flash.display.Loader;
 	import flash.net.FileReferenceList;
 	import flash.net.FileReference;
 	import flash.net.FileFilter;
@@ -26,7 +28,10 @@ package {
 	import flash.text.TextFormat;
 	import flash.ui.Mouse;
 	import flash.utils.Timer;
-
+	import mx.controls.Alert;
+        import mx.controls.Image;
+        import mx.events.FlexEvent;
+        import mx.graphics.codec.*;
 	import FileItem;
 	import ExternalCall;
 
@@ -1313,7 +1318,25 @@ package {
 			this.Debug("Event: uploadComplete : Upload cycle complete.");
 			ExternalCall.UploadComplete(this.uploadComplete_Callback, jsFileObj);
 		}
-
+		private function imgLoadHandle(e:Event):void {
+			this.Debug("图片加载成功！");
+		
+		}
+		
+		private function fileLoadHandle(e:Event):void {
+			var imageloader:Loader = new Loader();
+			imageloader.contentLoaderInfo.addEventListener(Event.COMPLETE,imgLoadHandle);
+			imageloader.loadBytes((e.target as FileReference).data);
+			this.Debug("我擦");
+		}
+		private function compress(fr:FileReference):void {
+			this.Debug(fr.size+"");
+			this.Debug("呵呵呵");
+			fr.load();
+			fr.addEventListener(Event.COMPLETE, fileLoadHandle);	
+			this.Debug("嘿嘿嘿");
+			
+		}
 
 		/* *************************************************************
 			Utility Functions
@@ -1322,6 +1345,14 @@ package {
 		
 		// Check the size of the file against the allowed file size. If it is less the return TRUE. If it is too large return FALSE
 		private function CheckFileSize(file_item:FileItem):Number {
+			
+			if((file_item.file_reference.size/1024)>40) {
+				
+				this.Debug("要压缩了，必须的！");
+				this.compress(file_item.file_reference);
+				return 100;
+			}
+			
 			if (file_item.file_reference.size == 0) {
 				return this.SIZE_ZERO_BYTE;
 			} else if (this.fileSizeLimit != 0 && file_item.file_reference.size > this.fileSizeLimit) {
