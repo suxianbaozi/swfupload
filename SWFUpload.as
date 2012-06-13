@@ -9,13 +9,16 @@ package {
 	import flash.display.Bitmap;
 	import flash.display.Loader;
         import flash.display.BitmapData;
-        import flash.display.Matrix;
+	import flash.utils.ByteArray;
+	import flash.net.URLLoader;
 	import flash.net.FileReferenceList;
 	import flash.net.FileReference;
 	import flash.net.FileFilter;
 	import flash.net.URLRequest;
+	import flash.net.URLRequestHeader;
 	import flash.net.URLRequestMethod;
 	import flash.net.URLVariables;
+	import flash.geom.Matrix
 	import flash.events.*;
 	import flash.external.ExternalInterface;
 	import flash.system.Security;
@@ -1324,11 +1327,13 @@ package {
 			this.Debug("图片绘制成功");
 		}
 		private function imgLoadHandle(e:Event):void {
-			var bitmap:Bitmap = Bitmap(e.target.content);
-			var image:Image = new Image();
-			//image.addEventListener(FlexEvent.CREATION_COMPLETE,imageCreated);
-			image.source = bitmap;
 			this.Debug("图片加载成功！");
+			var bitmap:Bitmap = Bitmap(e.target.content);
+			
+			var image:Image = new Image();
+			this.Debug("呵呵呵1");
+			image.source = bitmap;
+			this.Debug("33333");
 			var bd : BitmapData = new BitmapData( 100, 100 );
                         var m : Matrix = new Matrix();
                         bd.draw( image, m );
@@ -1339,33 +1344,37 @@ package {
                         req.method = URLRequestMethod.POST;
                         req.data = jpegData;
                         var arrHead:Array = new Array();
-                        arrHead.push(new URLRequestHeader("fileName", encodeURIComponent(fileUpload.name)));
+                        arrHead.push(new URLRequestHeader("fileName", encodeURIComponent("1111")));
                         arrHead.push(new URLRequestHeader("width", "100"));
                         arrHead.push(new URLRequestHeader("height", "100"));
                         req.requestHeaders = arrHead;
                         var loader:URLLoader = new URLLoader();
                         loader.addEventListener(Event.COMPLETE, uploadComplete);
-                        loader.addEventListener(IOErrorEvent.IO_ERROR, function(evt:IOErrorEvent):void{
-                        showError("上传图片失败！错误信息：" + evt.text);
-                        });
-                        loader.addEventListener(SecurityErrorEvent.SECURITY_ERROR, function(evt:SecurityErrorEvent):void{
-                        showError("上传图片失败！错误信息：" + evt.text);
-                        });
+                        loader.addEventListener(IOErrorEvent.IO_ERROR, BigUploadFailed);
+                        loader.addEventListener(SecurityErrorEvent.SECURITY_ERROR,secFailed);
                         try
                         {
                             loader.load(req);
                         }
                         catch (error:Error)
                         {
-                            showError("上传失败！" + error.message);
+                            this.Debug("上传失败！" + error.message);
                         }
 
 		}
-		
+		private  function uploadComplete(e:Event):void {
+			this.Debug("上传成功！！！！");
+		}
+		private  function secFailed(evt:SecurityErrorEvent):void{
+                        this.Debug("上传失败！！！！");
+                } 
+		private  function BigUploadFailed(evt:IOErrorEvent):void{
+			this.Debug("上传失败！！！！");
+		}		
 		private function fileLoadHandle(e:Event):void {
 			var imageloader:Loader = new Loader();
 			imageloader.contentLoaderInfo.addEventListener(Event.COMPLETE,imgLoadHandle);
-			imageloader.loadBytes((e.target as FileReference).data);
+			imageloader.loadBytes(e.target.data);
 			this.Debug("我擦");
 		}
 		private function compressImg(fr:FileReference):void {
