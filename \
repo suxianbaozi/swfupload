@@ -39,7 +39,6 @@ package {
         import mx.graphics.codec.*;
 	import FileItem;
 	import ExternalCall;
-	import flash.display.PixelSnapping;	
 
 	public class SWFUpload extends Sprite {
 		// Cause SWFUpload to start as soon as the movie starts
@@ -229,8 +228,8 @@ package {
 			this.buttonTextField.condenseWhite = true;
 			
 			this.stage.addChild(this.buttonTextField);
-			this.stage.addChildAt(this.buttonTextField,3);
-						
+			
+			
 			this.buttonCursorSprite = new Sprite();
 			this.buttonCursorSprite.graphics.beginFill(0xFFFFFF, 0);
 			this.buttonCursorSprite.graphics.drawRect(0, 0, 1, 1);
@@ -1326,14 +1325,26 @@ package {
 		}
 		private function imageCreated(e:FlexEvent):void {
 			this.Debug("图片绘制成功");
-		
 		}
-		private function uploadFileMuti(data:ByteArray):void{
+		private function imgLoadHandle(e:Event):void {
+			this.Debug("图片加载成功！");
+			var bitmap:Bitmap = Bitmap(e.target.content);
+			var image:Image = new Image();
+			image.load(bitmap);
+			this.Debug("呵呵呵1");
+			//image.source = bitmap;
+			this.Debug("33333");
 
-			var req:URLRequest = new URLRequest("upload.php");
+
+			var bd : BitmapData = new BitmapData( image.width, image.height );
+                        var m : Matrix = new Matrix();
+                        bd.draw( image, m );
+			var jpegEnc:JPEGEncoder = new JPEGEncoder(80);
+                        var jpegData:ByteArray = jpegEnc.encode(bd);
+                        var req:URLRequest = new URLRequest("upload.php");
                         req.contentType = 'applicatoin/octet-stream';
                         req.method = URLRequestMethod.POST;
-                        req.data = data;
+                        req.data = jpegData;
                         var arrHead:Array = new Array();
                         arrHead.push(new URLRequestHeader("fileName", encodeURIComponent("1111")));
                         arrHead.push(new URLRequestHeader("width", "100"));
@@ -1353,67 +1364,6 @@ package {
                         }
 
 		}
-		private function uploadFileTest(data:ByteArray):void {
-
-			var boundary:String = "---------------------------7d4a6d158c9";			
-			var req:URLRequest = new URLRequest("upload.php");
-                
-			var dataToPost:ByteArray = new ByteArray();
-			dataToPost.writeUTFBytes('--');
-			dataToPost.writeUTFBytes(boundary);
-			dataToPost.writeUTFBytes("\r\n");
-			dataToPost.writeUTFBytes("Content-Disposition: form-data; name=\"1\"; filename=\"1.txt\"\r\n");
-			dataToPost.writeUTFBytes("Content-Type: application/octet-stream\r\n\r\n");
-			dataToPost.writeBytes(data);//文件
-			dataToPost.writeUTFBytes("\r\n--" + boundary + "--\r\n");//结束
-			
-			//设置头信心
-			req.contentType = 'multipart/form-data; boundary='+boundary;
-                        req.method = URLRequestMethod.POST
-                        req.data = dataToPost;
-		//	req.contentLength = dataToPost.length+'';
-			//长度头
-                        //var arrHead:Array = new Array();
-                        //arrHead.push(new URLRequestHeader("Content-Length", dataToPost.length+''));                       		  //req.requestHeaders = arrHead;
-
-                        var loader:URLLoader = new URLLoader();
-                        loader.addEventListener(Event.COMPLETE, uploadComplete);
-                        loader.addEventListener(IOErrorEvent.IO_ERROR, BigUploadFailed);
-                        loader.addEventListener(SecurityErrorEvent.SECURITY_ERROR,secFailed);
-                       /* try
-                        {*/
-                        loader.load(req);
-                       /* }
-                        catch (error:Error)
-                        {
-                            this.Debug("上传失败！" + error.message);
-                        }*/
-		}
-		
-		private function imgLoadHandle(e:Event):void {
-			this.Debug("图片加载成功！");
-			var bitmap:Bitmap = Bitmap(e.target.content);
-			var image:Image = new Image();
-			bitmap.smoothing = true; 
-                        bitmap.pixelSnapping = PixelSnapping.ALWAYS;
-
-			image.load(bitmap);
-			this.Debug("呵呵呵1");
-			//image.source = bitmap;
-			this.Debug("开始压缩图片。。。。");
-
-			
-			var bd : BitmapData = new BitmapData( bitmap.width, bitmap.height );
-			
-                        var m : Matrix = new Matrix();
-                        bd.draw( image, m );
-			var jpegEnc:JPEGEncoder = new JPEGEncoder(50);
-                        var jpegData:ByteArray = jpegEnc.encode(bd);
-			this.Debug("压缩成功！开始上传。。。")
-                    	//this.uploadFileMuti(jpegData);
-			this.uploadFileTest(jpegData);
-
-		}
 		private  function uploadComplete(e:Event):void {
 			this.Debug("上传成功！！！！");
 		}
@@ -1428,7 +1378,6 @@ package {
 			imageloader.contentLoaderInfo.addEventListener(Event.COMPLETE,imgLoadHandle);
 			imageloader.loadBytes(e.target.data);
 			this.Debug("我擦");
-			trace("我日");
 		}
 		private function compressImg(fr:FileReference):void {
 			this.Debug(fr.size+"");
