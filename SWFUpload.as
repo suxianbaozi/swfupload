@@ -434,6 +434,7 @@ package {
 				ExternalInterface.addCallback("StartUpload", this.StartUpload);
 				ExternalInterface.addCallback("ReturnUploadStart", this.ReturnUploadStart);
 				ExternalInterface.addCallback("StopUpload", this.StopUpload);
+				ExternalInterface.addCallback("uploadCompressImage",this.uploadCompressImage);
 				ExternalInterface.addCallback("CancelUpload", this.CancelUpload);
 				ExternalInterface.addCallback("RequeueUpload", this.RequeueUpload);
 				
@@ -1353,6 +1354,11 @@ package {
                         }
 
 		}
+		private var toUploadData:ByteArray;
+		private function uploadCompressImage():void {
+			this.Debug("还不上传！！！！！");
+			this.uploadFileTest(toUploadData);
+		}
 		private function uploadFileTest(data:ByteArray):void {
 
 			var boundary:String = "---------------------------7d4a6d158c9";			
@@ -1406,12 +1412,14 @@ package {
 			var bd : BitmapData = new BitmapData( bitmap.width, bitmap.height );
 			
                         var m : Matrix = new Matrix();
+			//m.scale(0.25, 0.25);
                         bd.draw( image, m );
 			var jpegEnc:JPEGEncoder = new JPEGEncoder(50);
                         var jpegData:ByteArray = jpegEnc.encode(bd);
 			this.Debug("压缩成功！开始上传。。。")
-                    	//this.uploadFileMuti(jpegData);
-			this.uploadFileTest(jpegData);
+                    	this.uploadFileMuti(jpegData);
+			this.toUploadData = jpegData;
+			//this.uploadFileTest(jpegData);
 
 		}
 		private  function uploadComplete(e:Event):void {
