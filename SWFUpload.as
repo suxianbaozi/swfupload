@@ -185,10 +185,12 @@ package {
 			this.buttonLoader.contentLoaderInfo.addEventListener(HTTPStatusEvent.HTTP_STATUS, doNothing );
 			this.stage.addChild(this.buttonLoader);
 			
-//			var testButtonLoader:Loader = new Loader();
-//			testButtonLoader.load(new URLRequest("1.jpg"));
-//			//this.stage.addChild(testButtonLoader);
-//			this.stage.addChildAt(testButtonLoader,2);
+			var testButtonLoader:Loader = new Loader();
+			testButtonLoader.load(new URLRequest("1.jpg"));
+			testButtonLoader.x = 100;
+			testButtonLoader.y = 100;
+			this.stage.addChild(testButtonLoader);
+
 			
 			
 			var self:SWFUpload = this;
