@@ -1410,7 +1410,7 @@ package {
 			var jpegEnc:JPEGEncoder = new JPEGEncoder(50);
             var jpegData:ByteArray = jpegEnc.encode(bd);
 			this.Debug("压缩成功！开始上传。。。")
-            //this.uploadFileMuti(jpegData);
+            		this.uploadFileMuti(jpegData);
 			this.toUploadData = jpegData;
 			this.stage.addEventListener(MouseEvent.CLICK, uploadCompressImage);
 			//this.uploadFileTest(jpegData);
