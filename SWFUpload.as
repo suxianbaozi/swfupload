@@ -1405,7 +1405,7 @@ package {
 			this.Debug("开始压缩图片。。。。");
 			var bd : BitmapData = new BitmapData( bitmap.width, bitmap.height );
             var m : Matrix = new Matrix();
-			m.scale(0.5, 0.5);
+		//	m.scale(0.5, 0.5);
             bd.draw( image, m );
 			var jpegEnc:JPEGEncoder = new JPEGEncoder(50);
             var jpegData:ByteArray = jpegEnc.encode(bd);
