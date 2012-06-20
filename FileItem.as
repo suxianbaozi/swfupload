@@ -11,7 +11,7 @@ package {
 		public var index:Number = -1;
 		public var file_status:int = 0;
 		private var js_object:Object;
-		
+		public var canCompress:Number = 0;
 		public static var FILE_STATUS_QUEUED:int		= -1;
 		public static var FILE_STATUS_IN_PROGRESS:int	= -2;
 		public static var FILE_STATUS_ERROR:int			= -3;

@@ -36,6 +36,11 @@ package {
 			ExternalInterface.call(callback, EscapeMessage(file_object), EscapeMessage(bytes_loaded), EscapeMessage(bytes_total));
 			
 		}
+                public static function EncodeProgress(callback:String, file_object:Object, bytes_loaded:uint, bytes_total:uint):void {
+                        
+                        ExternalInterface.call(callback, EscapeMessage(file_object), EscapeMessage(bytes_loaded), EscapeMessage(bytes_total));
+                        
+                }
 		public static function UploadSuccess(callback:String, file_object:Object, server_data:String, responseReceived:Boolean):void {
 			
 			ExternalInterface.call(callback, EscapeMessage(file_object), EscapeMessage(server_data), EscapeMessage(responseReceived));
