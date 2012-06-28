@@ -1,0 +1,29 @@
+import socket
+from threading import Thread
+
+class returnCrossDomain(Thread):
+    def __init__(self,connection):
+        Thread.__init__(self)
+        self.con = connection
+    def run(self):
+        try:
+            self.con.send('''<?xml version="1.0" encoding="utf-8"?><!DOCTYPE cross-domain-policy SYSTEM "http://www.adobe.com/xml/dtds/cross-domain-policy.dtd"><cross-domain-policy><site-control permitted-cross-domain-policies="all"/><allow-access-from domain="*.sofock.com" to-ports="80,843"/></cross-domain-policy>\0''')
+        except:
+            pass
+        self.con.close()
+
+def main():
+    sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    sock.bind(('192.168.181.44',843))
+    sock.listen(100)
+    while True:
+        connection,address = sock.accept()
+        returnCrossDomain(connection).start()
+
+
+
+if __name__=="__main__":
+    main()
+            
+
+
