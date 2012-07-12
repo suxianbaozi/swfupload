@@ -1,0 +1,24 @@
+package org.httpclient.events {
+  
+  import flash.events.Event;
+  
+  import org.httpclient.HttpRequest;
+  
+  public class HttpProgressEvent extends Event {
+    
+    public static const PROGRESS:String = "requestProgress";
+    
+    private var _load:Number;
+
+    
+    public function HttpProgressEvent(load:Number, type:String = PROGRESS, bubbles:Boolean = false, cancelable:Boolean = false):void {
+      super(type, bubbles, cancelable);
+      _load = load
+    }
+    
+    public function get load_der():Number {
+      return _load;
+    }
+
+  }
+}

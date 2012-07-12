@@ -515,6 +515,11 @@ package {
 			ExternalCall.UploadProgress(this.uploadProgress_Callback, this.current_file_item.ToJavaScriptObject(), bytesLoaded, bytesTotal);
 		}
 		
+                private function FileProgressHttpClient_Handler(bytesLoaded:Number,bytesTotal:Number):void {
+                        this.Debug("Event: uploadProgress: File ID: " + this.current_file_item.id + ". Bytes: " + bytesLoaded + ". Total: " + bytesTotal);
+                        ExternalCall.UploadProgress(this.uploadProgress_Callback, this.current_file_item.ToJavaScriptObject(), bytesLoaded, bytesTotal);
+                }
+
 		private function AssumeSuccessTimer_Handler(event:TimerEvent):void {
 			this.Debug("Event: AssumeSuccess: " + this.assumeSuccessTimeout + " passed without server response");
 			this.UploadSuccess(this.current_file_item, "", false);
@@ -641,14 +646,19 @@ package {
 			
 			// Determine how many queue slots are remaining (check the unlimited (0) settings, successful uploads and queued uploads)
 			var queue_slots_remaining:Number = 0;
+
 			if (this.fileUploadLimit == 0) {
+
 				queue_slots_remaining = this.fileQueueLimit == 0 ? file_reference_list.length : (this.fileQueueLimit - this.queued_uploads);	// If unlimited queue make the allowed size match however many files were selected.
 			} else {
+
 				var remaining_uploads:Number = this.fileUploadLimit - this.successful_uploads - this.queued_uploads;
+                                
 				if (remaining_uploads < 0) remaining_uploads = 0;
 				if (this.fileQueueLimit == 0 || this.fileQueueLimit >= remaining_uploads) {
 					queue_slots_remaining = remaining_uploads;
 				} else if (this.fileQueueLimit < remaining_uploads) {
+                                        ExternalInterface.call("alert", this.fileQueueLimit +':'+ this.queued_uploads);
 					queue_slots_remaining = this.fileQueueLimit - this.queued_uploads;
 				}
 			}
@@ -1383,17 +1393,23 @@ package {
                         this.Debug(e.readUTFBytes());
                 }
                 private function httpclientUpload(data:ByteArray):void {
+                    this.current_file_item.forUploadData = data;
                     this.Debug("开始上传!!!文件大小"+(data.length/1024)+"KB");
                     var client:HttpClient = new HttpClient();
-                    var uri:URI = new URI("http://upd1.ajkimg.com/upload");
+                    
+                    var uri:URI = new URI(this.uploadURL);
                     var contentType:String = "application/octet-stream";
                     var multipart:Multipart = new Multipart([ 
-                    new Part("file", data, contentType, [{name:"filename",value:"2.jpg" }]),
+                    new Part("file", data, contentType, [{name:"filename",value:this.current_file_item.file_reference.name }]),
                     ]);
                 
                     //client.listener.onComplete = httpclientComplete;    
                     client.listener.onData = Complete_Handler;
+                    client.listener.onProgress = httpClientProgressHandler;
                     client.postMultipart(uri, multipart);
+                }
+                private function httpClientProgressHandler(e:HttpProgressEvent):void {
+                    FileProgressHttpClient_Handler(e.load_der,this.current_file_item.forUploadData.length);
                 }
 		private function uploadFileTest(data:ByteArray):void {
                 
@@ -1602,7 +1618,8 @@ package {
 					for (var i:Number=0; i < lines.length; i++) {
 						lines[i] = "SWF DEBUG: " + lines[i];
 					}
-						ExternalCall.Debug(this.debug_Callback, lines.join("\n"));
+                                        ExternalCall.Debug(this.debug_Callback, lines.join("\n"));
+                                        
 				}
 			} catch (ex:Error) {
 				// pretend nothing happened

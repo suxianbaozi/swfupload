@@ -16,6 +16,7 @@ package org.httpclient {
   import flash.events.IOErrorEvent;
   import flash.events.SecurityErrorEvent;
   import flash.events.ProgressEvent;  
+  import flash.events.OutputProgressEvent;
   import flash.errors.EOFError;
   import flash.events.TimerEvent;
   
@@ -79,9 +80,14 @@ package org.httpclient {
       _socket.addEventListener(Event.CLOSE, onClose);
       _socket.addEventListener(IOErrorEvent.IO_ERROR, onIOError);
       _socket.addEventListener(SecurityErrorEvent.SECURITY_ERROR, onSecurityError);
-      _socket.addEventListener(ProgressEvent.SOCKET_DATA, onSocketData);      
+      _socket.addEventListener(ProgressEvent.SOCKET_DATA, onSocketData);
+      _socket.addEventListener(OutputProgressEvent.OUTPUT_PROGRESS,onOutData);
     }
     
+    private function onOutData(e:OutputProgressEvent):void {
+        
+        onRequestProgress(e.bytesTotal);
+    }
     /**
      * Default port.
      */
@@ -153,8 +159,6 @@ package org.httpclient {
       
     }
     
-    
-
     /**
      * Send request.
      * @param uri URI
@@ -176,14 +180,16 @@ package org.httpclient {
        if (request.hasRequestBody) {
             _requestBuffer = new HttpRequestBuffer(request.body);
             Log.debug("Sending request data");
+            var bytesTotalLength:Number = 0;
             while (_requestBuffer.hasData) {
                 var bytes:ByteArray = _requestBuffer.read();
                 if (bytes.length > 0) {
+                    bytesTotalLength += bytes.length;
                     _socket.writeBytes(bytes);
                     _timer.reset();
                     _socket.flush();
                 }
-        }
+            }
       }
       
       Log.debug("Send request done");
@@ -191,6 +197,8 @@ package org.httpclient {
       onRequestComplete(request, headerBytes.readUTFBytes(headerBytes.length));
     }
     
+    
+
     /**
      * Socket data available.
      */
@@ -242,6 +250,10 @@ package org.httpclient {
     private function onComplete(response:HttpResponse):void {
       _timer.stop();
       _dispatcher.dispatchEvent(new HttpResponseEvent(response));
+    }
+
+    private function onRequestProgress(load:Number):void{
+       _dispatcher.dispatchEvent(new HttpProgressEvent(load));
     }
     
     private function onTimeout(idleTime:Number):void {

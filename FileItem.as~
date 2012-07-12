@@ -1,6 +1,5 @@
 package {
 	import flash.net.FileReference;
-        import flash.utils.ByteArray;
 
 	internal class FileItem
 	{
