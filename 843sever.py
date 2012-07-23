@@ -12,7 +12,7 @@ class returnCrossDomain(Thread):
             <?xml version="1.0" encoding="utf-8"?>\n
             <!DOCTYPE cross-domain-policy SYSTEM "http://www.adobe.com/xml/dtds/cross-domain-policy.dtd">\n
             <cross-domain-policy><site-control permitted-cross-domain-policies="all"/>\n
-            <allow-access-from domain="*.aifang.com" to-ports="*" />\n
+            <allow-access-from domain="*.sofock.com" to-ports="*" />\n
             <allow-access-from domain="*.pages.aifcdn.com" to-ports="*" />\n
             <allow-access-from domain="*.aifcdn.com" to-ports="*" />\n
             <allow-access-from domain="anjuke.adsame.com" to-ports="*" />\n

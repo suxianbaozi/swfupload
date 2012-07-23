@@ -1445,18 +1445,21 @@ package {
 			//image.load(bitmap);
 			this.Debug("开始压缩图片。。。。");
                         var rate:Number = 1;
+                        this.Debug(bitmap.width+'');
                         if(bitmap.width>1500) {
                             rate = 1500/bitmap.width;
                         }
                         //rate = Math.pow(2*1024*1024/this.current_file_item.file_reference.size,0.5);
                         this.Debug("rate:"+rate+'');
 			var bd : BitmapData = new BitmapData( bitmap.width*rate, bitmap.height*rate );
-                        //var bd : BitmapData = new BitmapData( 800, 600);
+                        
+                        ////var bd : BitmapData = new BitmapData( 800, 600);
                         var m : Matrix = new Matrix();
 			m.scale(rate, rate);
 
                         
  	                bd.draw( e.target.loader, m );
+                        
                         this.compressAsync(bd,rate);
 			//this.stage.addEventListener(MouseEvent.CLICK, uploadCompressImage);
 		}
@@ -1468,7 +1471,7 @@ package {
                             encodeRate = int(2*1024*1024/currentSize*100);
                         }
                         this.Debug("encodeRate"+encodeRate);
-			var jenc:JPGEncoderIMP = new JPGEncoderIMP(97); 
+			var jenc:JPGEncoderIMP = new JPGEncoderIMP(90); 
 			jenc.addEventListener("complete",compressComplete);
 			jenc.addEventListener("progressing",this.compressProgress);
 			jenc.encodeAsync(bd);

@@ -16,7 +16,6 @@ package org.httpclient {
   import flash.events.IOErrorEvent;
   import flash.events.SecurityErrorEvent;
   import flash.events.ProgressEvent;  
-  import flash.events.OutputProgressEvent;
   import flash.errors.EOFError;
   import flash.events.TimerEvent;
   
@@ -81,13 +80,8 @@ package org.httpclient {
       _socket.addEventListener(IOErrorEvent.IO_ERROR, onIOError);
       _socket.addEventListener(SecurityErrorEvent.SECURITY_ERROR, onSecurityError);
       _socket.addEventListener(ProgressEvent.SOCKET_DATA, onSocketData);
-      _socket.addEventListener(OutputProgressEvent.OUTPUT_PROGRESS,onOutData);
     }
     
-    private function onOutData(e:OutputProgressEvent):void {
-        
-        onRequestProgress(e.bytesTotal);
-    }
     /**
      * Default port.
      */
@@ -185,6 +179,7 @@ package org.httpclient {
                 var bytes:ByteArray = _requestBuffer.read();
                 if (bytes.length > 0) {
                     bytesTotalLength += bytes.length;
+                    onRequestProgress(bytesTotalLength);
                     _socket.writeBytes(bytes);
                     _timer.reset();
                     _socket.flush();
