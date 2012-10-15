@@ -60,7 +60,8 @@ package {
 		private var current_file_item:FileItem = null;	// the item that is currently being uploaded.
 
 		private var file_index:Array = new Array();
-		
+		private var file_index_by_name:Array = new Array();
+
 		private var successful_uploads:Number = 0;		// Tracks the uploads that have been completed
 		private var queue_errors:Number = 0;			// Tracks files rejected during queueing
 		private var upload_errors:Number = 0;			// Tracks files that fail upload
@@ -407,7 +408,7 @@ package {
 			var oSelf:SWFUpload = this;
 			this.restoreExtIntTimer = new Timer(1000, 0);
 			this.restoreExtIntTimer.addEventListener(TimerEvent.TIMER, function ():void { oSelf.CheckExternalInterface();} );
-			this.restoreExtIntTimer.start();
+			//this.restoreExtIntTimer.start();
 		}
 
 		// Used to periodically check that the External Interface functions are still working
@@ -487,8 +488,9 @@ package {
 		}
 
 		private function Open_Handler(event:Event):void {
-			this.Debug("Event: uploadProgress (OPEN): File ID: " + this.current_file_item.id);
-			ExternalCall.UploadProgress(this.uploadProgress_Callback, this.current_file_item.ToJavaScriptObject(), 0, this.current_file_item.file_reference.size);
+                        var file_item:FileItem = this.file_index_by_name[event.target.name];
+			this.Debug("Event: uploadProgress (OPEN): File ID: " + file_item.id);
+			ExternalCall.UploadProgress(this.uploadProgress_Callback, file_item.ToJavaScriptObject(), 0, file_item.file_reference.size);
 		}
 		
 		private function FileProgress_Handler(event:ProgressEvent):void {
@@ -510,9 +512,11 @@ package {
 				this.assumeSuccessTimer.addEventListener(TimerEvent.TIMER_COMPLETE, AssumeSuccessTimer_Handler);
 				this.assumeSuccessTimer.start();
 			}
+                        
+                        var file_item:FileItem = this.file_index_by_name[event.target.name];
 			
-			this.Debug("Event: uploadProgress: File ID: " + this.current_file_item.id + ". Bytes: " + bytesLoaded + ". Total: " + bytesTotal);
-			ExternalCall.UploadProgress(this.uploadProgress_Callback, this.current_file_item.ToJavaScriptObject(), bytesLoaded, bytesTotal);
+			this.Debug("Event: uploadProgress: File ID: " + file_item.id + ". Bytes: " + bytesLoaded + ". Total: " + bytesTotal);
+			ExternalCall.UploadProgress(this.uploadProgress_Callback, file_item.ToJavaScriptObject(), bytesLoaded, bytesTotal);
 		}
 		
                 private function FileProgressHttpClient_Handler(bytesLoaded:Number,bytesTotal:Number):void {
@@ -557,7 +561,8 @@ package {
 		}
 		
 		private function ServerData_Handler(event:DataEvent):void {
-			this.UploadSuccess(this.current_file_item, event.data);
+                        var file_item:FileItem = this.file_index_by_name[event.target.name];
+			this.UploadSuccess(file_item, event.data);
 		}
 		
 		private function UploadSuccess(file:FileItem, serverData:String, responseReceived:Boolean = true):void {
@@ -576,11 +581,12 @@ package {
 			this.Debug("Event: uploadSuccess: File ID: " + file.id + " Response Received: " + responseReceived.toString() + " Data: " + serverData);
 			ExternalCall.UploadSuccess(this.uploadSuccess_Callback, file.ToJavaScriptObject(), serverData, responseReceived);
 
-			this.UploadComplete(false);
+			this.UploadComplete(false,file);
 			
 		}
 
 		private function HTTPError_Handler(event:HTTPStatusEvent):void {
+                        var file_item:FileItem = this.file_index_by_name[event.target.name];
 			var isSuccessStatus:Boolean = false;
 			for (var i:Number = 0; i < this.httpSuccess.length; i++) {
 				if (this.httpSuccess[i] === event.status) {
@@ -599,35 +605,37 @@ package {
 				this.upload_errors++;
 				this.current_file_item.file_status = FileItem.FILE_STATUS_ERROR;
 
-				this.Debug("Event: uploadError: HTTP ERROR : File ID: " + this.current_file_item.id + ". HTTP Status: " + event.status + ".");
-				ExternalCall.UploadError(this.uploadError_Callback, this.ERROR_CODE_HTTP_ERROR, this.current_file_item.ToJavaScriptObject(), event.status.toString());
-				this.UploadComplete(true); 	// An IO Error is also called so we don't want to complete the upload yet.
+				this.Debug("Event: uploadError: HTTP ERROR : File ID: " + file_item.id + ". HTTP Status: " + event.status + ".");
+				ExternalCall.UploadError(this.uploadError_Callback, this.ERROR_CODE_HTTP_ERROR, file_item.ToJavaScriptObject(), event.status.toString());
+				this.UploadComplete(true,file_item); 	// An IO Error is also called so we don't want to complete the upload yet.
 			}
 		}
 		
 		// Note: Flash Player does not support Uploads that require authentication. Attempting this will trigger an
 		// IO Error or it will prompt for a username and password and may crash the browser (FireFox/Opera)
 		private function IOError_Handler(event:IOErrorEvent):void {
+                        var file_item:FileItem = this.file_index_by_name[event.target.name];
 			// Only trigger an IO Error event if we haven't already done an HTTP error
-			if (this.current_file_item.file_status != FileItem.FILE_STATUS_ERROR) {
+			if (file_item.file_status != FileItem.FILE_STATUS_ERROR) {
 				this.upload_errors++;
-				this.current_file_item.file_status = FileItem.FILE_STATUS_ERROR;
+				file_item.file_status = FileItem.FILE_STATUS_ERROR;
 
-				this.Debug("Event: uploadError : IO Error : File ID: " + this.current_file_item.id + ". IO Error: " + event.text);
-				ExternalCall.UploadError(this.uploadError_Callback, this.ERROR_CODE_IO_ERROR, this.current_file_item.ToJavaScriptObject(), event.text);
+				this.Debug("Event: uploadError : IO Error : File ID: " + file_item.id + ". IO Error: " + event.text);
+				ExternalCall.UploadError(this.uploadError_Callback, this.ERROR_CODE_IO_ERROR, file_item.ToJavaScriptObject(), event.text);
 			}
 
-			this.UploadComplete(true);
+			this.UploadComplete(true,file_item);
 		}
 
 		private function SecurityError_Handler(event:SecurityErrorEvent):void {
+                        var file_item:FileItem = this.file_index_by_name[event.target.name];
 			this.upload_errors++;
 			this.current_file_item.file_status = FileItem.FILE_STATUS_ERROR;
 
-			this.Debug("Event: uploadError : Security Error : File Number: " + this.current_file_item.id + ". Error text: " + event.text);
-			ExternalCall.UploadError(this.uploadError_Callback, this.ERROR_CODE_SECURITY_ERROR, this.current_file_item.ToJavaScriptObject(), event.text);
+			this.Debug("Event: uploadError : Security Error : File Number: " + file_item.id + ". Error text: " + event.text);
+			ExternalCall.UploadError(this.uploadError_Callback, this.ERROR_CODE_SECURITY_ERROR, file_item.ToJavaScriptObject(), event.text);
 
-			this.UploadComplete(true);
+			this.UploadComplete(true,file_item);
 		}
 
 		private function Select_Many_Handler(event:Event):void {
@@ -658,7 +666,6 @@ package {
 				if (this.fileQueueLimit == 0 || this.fileQueueLimit >= remaining_uploads) {
 					queue_slots_remaining = remaining_uploads;
 				} else if (this.fileQueueLimit < remaining_uploads) {
-                                        ExternalInterface.call("alert", this.fileQueueLimit +':'+ this.queued_uploads);
 					queue_slots_remaining = this.fileQueueLimit - this.queued_uploads;
 				}
 			}
@@ -674,7 +681,7 @@ package {
 				for (var i:Number = 0; i < file_reference_list.length; i++) {
 					var file_item:FileItem = new FileItem(file_reference_list[i], this.movieName, this.file_index.length);
 					this.file_index[file_item.index] = file_item;
-
+                                        this.file_index_by_name[file_item.file_reference.name] = file_item;
 					// Verify that the file is accessible. Zero byte files and possibly other conditions can cause a file to be inaccessible.
 					var jsFileObj:Object = file_item.ToJavaScriptObject();
 					var is_valid_file_reference:Boolean = (jsFileObj.filestatus !== FileItem.FILE_STATUS_ERROR);
@@ -683,10 +690,11 @@ package {
 						// Check the size, if it's within the limit add it to the upload list.
 						var size_result:Number = this.CheckFileSize(file_item);
 						var is_valid_filetype:Boolean = this.CheckFileType(file_item);
-						var canCompress:Number = this.CheckFileCanCompress(file_item);
-						if(canCompress==1) {
-							file_item.canCompress = 1;
-						}
+
+						//var canCompress:Number = this.CheckFileCanCompress(file_item);
+						//if(canCompress==1) {
+						//	file_item.canCompress = 1;
+						//}
 						if(size_result == this.SIZE_OK && is_valid_filetype) {
 							file_item.file_status = FileItem.FILE_STATUS_QUEUED;
 							this.file_queue.push(file_item);
@@ -719,11 +727,26 @@ package {
 						this.Debug("Event: fileQueueError : File is zero bytes or FileReference is invalid.");
 						ExternalCall.FileQueueError(this.fileQueueError_Callback, this.ERROR_CODE_ZERO_BYTE_FILE, file_item.ToJavaScriptObject(), "File is zero bytes or cannot be accessed and cannot be uploaded.");
 					}
+
+
+
+                                    file_item.file_reference.addEventListener(Event.OPEN, this.Open_Handler);  
+                                    file_item.file_reference.addEventListener(ProgressEvent.PROGRESS, this.FileProgress_Handler);  
+                                    file_item.file_reference.addEventListener(IOErrorEvent.IO_ERROR, this.IOError_Handler);
+                                    file_item.file_reference.addEventListener(SecurityErrorEvent.SECURITY_ERROR, this.SecurityError_Handler);
+                                    file_item.file_reference.addEventListener(HTTPStatusEvent.HTTP_STATUS, this.HTTPError_Handler);
+                                    
+                                    file_item.file_reference.addEventListener(DataEvent.UPLOAD_COMPLETE_DATA, this.ServerData_Handler);
+                                    var request:URLRequest = this.BuildRequest(file_item);
+                                    file_item.file_reference.upload(request, this.filePostName, false);
+                                    this.Debug(file_item.file_reference.name);
+                                    //ExternalInterface.call("alert",file_item.file_reference.name);
+//testtest
 				}
 			}
 			
-			this.Debug("Event: fileDialogComplete : Finished processing selected files. Files selected: " + file_reference_list.length + ". Files Queued: " + num_files_queued);
-			ExternalCall.FileDialogComplete(this.fileDialogComplete_Callback, file_reference_list.length, num_files_queued, this.queued_uploads);
+			//this.Debug("Event: fileDialogComplete : Finished processing selected files. Files selected: " + file_reference_list.length + ". Files Queued: " + num_files_queued);
+			//ExternalCall.FileDialogComplete(this.fileDialogComplete_Callback, file_reference_list.length, num_files_queued, this.queued_uploads);
 		}
 
 		
@@ -818,7 +841,7 @@ package {
 					} else {
 						this.Debug("Event: cancelUpload: File ID: " + this.current_file_item.id + ". Cancelled current upload. Suppressed uploadError event.");
 					}
-					this.UploadComplete(false);
+					this.UploadComplete(false,this.current_file_item);
 			} else if (file_id) {
 					// Find the file in the queue
 					var file_index:Number = this.FindIndexInFileQueue(file_id);
@@ -1279,7 +1302,7 @@ package {
 					this.current_file_item.file_reference.addEventListener(DataEvent.UPLOAD_COMPLETE_DATA, this.ServerData_Handler);
 					
 					// Get the request (post values, etc)
-					var request:URLRequest = this.BuildRequest();
+					var request:URLRequest = this.BuildRequest(this.current_file_item);
 					
 					if (this.uploadURL.length == 0) {
 						this.Debug("Event: uploadError : IO Error : File ID: " + this.current_file_item.id + ". Upload URL string is empty.");
@@ -1313,7 +1336,7 @@ package {
 					this.Debug("Event: uploadError(): Upload Failed. Exception occurred: " + message);
 					ExternalCall.UploadError(this.uploadError_Callback, this.ERROR_CODE_UPLOAD_FAILED, this.current_file_item.ToJavaScriptObject(), message);
 					
-					this.UploadComplete(true);
+					this.UploadComplete(true,null);
 				}
 			} else {
 				// Remove the event handlers
@@ -1334,17 +1357,18 @@ package {
 
 		// Completes the file upload by deleting it's reference, advancing the pointer.
 		// Once this event fires a new upload can be started.
-		private function UploadComplete(eligible_for_requeue:Boolean):void {
+		private function UploadComplete(eligible_for_requeue:Boolean,file_item:FileItem):void {
 			var jsFileObj:Object = this.current_file_item.ToJavaScriptObject();
 			
-			this.removeFileReferenceEventListeners(this.current_file_item);
+//                         
+			this.removeFileReferenceEventListeners(file_item);
 
 			if (!eligible_for_requeue || this.requeueOnError == false) {
 				this.current_file_item.file_reference = null;
 				this.queued_uploads--;
 			} else if (this.requeueOnError == true) {
 				this.current_file_item.file_status = FileItem.FILE_STATUS_QUEUED;
-				this.file_queue.unshift(this.current_file_item);
+				this.file_queue.unshift(FileItem);
 			}
 
 			this.current_file_item = null;
@@ -1445,18 +1469,21 @@ package {
 			//image.load(bitmap);
 			this.Debug("开始压缩图片。。。。");
                         var rate:Number = 1;
+                        this.Debug(bitmap.width+'');
                         if(bitmap.width>1500) {
                             rate = 1500/bitmap.width;
                         }
                         //rate = Math.pow(2*1024*1024/this.current_file_item.file_reference.size,0.5);
                         this.Debug("rate:"+rate+'');
 			var bd : BitmapData = new BitmapData( bitmap.width*rate, bitmap.height*rate );
-                        //var bd : BitmapData = new BitmapData( 800, 600);
+                        
+                        ////var bd : BitmapData = new BitmapData( 800, 600);
                         var m : Matrix = new Matrix();
 			m.scale(rate, rate);
 
                         
  	                bd.draw( e.target.loader, m );
+                        
                         this.compressAsync(bd,rate);
 			//this.stage.addEventListener(MouseEvent.CLICK, uploadCompressImage);
 		}
@@ -1468,7 +1495,7 @@ package {
                             encodeRate = int(2*1024*1024/currentSize*100);
                         }
                         this.Debug("encodeRate"+encodeRate);
-			var jenc:JPGEncoderIMP = new JPGEncoderIMP(97); 
+			var jenc:JPGEncoderIMP = new JPGEncoderIMP(90); 
 			jenc.addEventListener("complete",compressComplete);
 			jenc.addEventListener("progressing",this.compressProgress);
 			jenc.encodeAsync(bd);
@@ -1562,12 +1589,12 @@ package {
 			return is_valid_filetype;
 		}
 
-		private function BuildRequest():URLRequest {
+		private function BuildRequest(file_item:FileItem):URLRequest {
 			// Create the request object
 			var request:URLRequest = new URLRequest();
 			request.method = URLRequestMethod.POST;
 			
-			var file_post:Object = this.current_file_item.GetPostObject();
+			var file_post:Object = file_item.GetPostObject();
 			
 			if (this.useQueryString) {
 				var pairs:Array = new Array();
