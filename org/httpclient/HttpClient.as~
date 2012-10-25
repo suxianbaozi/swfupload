@@ -14,7 +14,6 @@ package org.httpclient {
   import org.httpclient.http.Head;
   import org.httpclient.http.Delete;
   import org.httpclient.events.HttpListener;
-  
   import org.httpclient.http.multipart.Multipart;
 
     
@@ -40,13 +39,14 @@ package org.httpclient {
     private var _listener:*;
     private var _timeout:int;
     private var _proxy:URI;
-    
+    public var sign_index:String;
     /**
      * Create HTTP client.
      * @param proxy URI
      * @param timeout Default timeout (1 minute)
      */
-    public function HttpClient(proxy:URI = null, timeout:int = 60000) {
+    public function HttpClient(proxy:URI = null, timeout:int = 60000,sign_index:String = null) {
+       this.sign_index = sign_index;
       _timeout = timeout;
       _proxy = proxy;
     }
@@ -179,8 +179,7 @@ package org.httpclient {
      * @param uri
      * @param multipart
      */
-    public function postMultipart(uri:URI, multipart:Multipart,swfupload:SWFUpload):void {
-      this.swfupload = swfupload;
+    public function postMultipart(uri:URI, multipart:Multipart):void {
       var post:Post = new Post();
       post.setMultipart(multipart);
       request(uri, post);

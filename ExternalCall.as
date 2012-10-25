@@ -41,6 +41,13 @@ package {
                         ExternalInterface.call(callback, EscapeMessage(file_object), EscapeMessage(bytes_loaded), EscapeMessage(bytes_total));
                         
                 }
+                
+                public static function EncodeSuccess(callback:String, file_object:Object):void {
+                        
+                        ExternalInterface.call(callback, EscapeMessage(file_object));
+                        
+                }
+                
 		public static function UploadSuccess(callback:String, file_object:Object, server_data:String, responseReceived:Boolean):void {
 			
 			ExternalInterface.call(callback, EscapeMessage(file_object), EscapeMessage(server_data), EscapeMessage(responseReceived));
@@ -64,7 +71,13 @@ package {
 		public static function Bool(callback:String):Boolean {
 			return ExternalInterface.call(callback);
 		}
-		
+		public static function goNext(callback:String, file_object:Object):void {
+                        ExternalInterface.call(callback, EscapeMessage(file_object));
+                }
+                public static function checkBeforeSelect(callback:String):Boolean { 
+                        var re:Boolean =  ExternalInterface.call(callback);
+                        return re;
+                }
 		
 		/* Escapes all the backslashes which are not translated correctly in the Flash -> JavaScript Interface
 		 * 

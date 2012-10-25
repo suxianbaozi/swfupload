@@ -1,9 +1,9 @@
-package {
+package org{
 	import flash.net.FileReference;
         import flash.utils.ByteArray;
 
 	internal class FileItem
-	{ 
+	{
 		private static var file_id_sequence:Number = 0;		// tracks the file id sequence
 
 		private var postObject:Object;
@@ -11,7 +11,7 @@ package {
 		public var id:String;
 		public var index:Number = -1;
 		public var file_status:int = 0;
-		public var js_object:Object;
+		private var js_object:Object;
 		public var canCompress:Number = 0;
                 public var forUploadData:ByteArray;
 		public static var FILE_STATUS_QUEUED:int		= -1;
@@ -44,7 +44,6 @@ package {
 				this.js_object.creationdate = this.file_reference.creationDate || new Date(0);
 				this.js_object.modificationdate = this.file_reference.modificationDate || new Date(0);
                                 this.js_object.sign_index = this.sign_index;
-                                this.js_object.canCompress = this.canCompress;
 			} catch (ex:Error) {
 				this.file_status = FileItem.FILE_STATUS_ERROR;
 			}

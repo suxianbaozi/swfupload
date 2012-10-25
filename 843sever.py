@@ -7,23 +7,23 @@ class returnCrossDomain(Thread):
         Thread.__init__(self)
         self.con = connection
     def run(self):
+        clientData  = self.con.recv(1024)
+        xmlData  = '''<?xml version="1.0" encoding="utf-8"?>'''
+        xmlData += '''<!DOCTYPE cross-domain-policy SYSTEM "http://www.adobe.com/xml/dtds/cross-domain-policy.dtd">'''
+        xmlData += '''<cross-domain-policy><site-control permitted-cross-domain-policies="all"/>'''
+        xmlData += '''<allow-access-from domain="*.aifang.com" to-ports="*" />'''
+        xmlData += '''<allow-access-from domain="*.anjuke.com" to-ports="*" />'''
+        xmlData += '''<allow-access-from domain="*.haozu.com" to-ports="*" />'''
+        xmlData += '''<allow-access-from domain="*.jinpu.com" to-ports="*" />'''
+        xmlData += '''<allow-access-from domain="*.ajkcdn.com" to-ports="*" />'''
+        xmlData += '''<allow-access-from domain="*.aifcdn.com" to-ports="*" />'''
+        xmlData += '''<allow-access-from domain="*.anjukestatic.com" to-ports="*" />'''
+	xmlData += '''</cross-domain-policy>\0'''
         try:
-            self.con.send('''\n
-            <?xml version="1.0" encoding="utf-8"?>\n
-            <!DOCTYPE cross-domain-policy SYSTEM "http://www.adobe.com/xml/dtds/cross-domain-policy.dtd">\n
-            <cross-domain-policy><site-control permitted-cross-domain-policies="all"/>\n
-            <allow-access-from domain="*.sofock.com" to-ports="*" />\n
-            <allow-access-from domain="*.pages.aifcdn.com" to-ports="*" />\n
-            <allow-access-from domain="*.aifcdn.com" to-ports="*" />\n
-            <allow-access-from domain="anjuke.adsame.com" to-ports="*" />\n
-            <allow-access-from domain="anjuke.adsame.com" to-ports="*" />\n
-            </cross-domain-policy>\0\n
-            ''')
-        except:
+            self.con.send(xmlData)
+        except Excepiton,e:
             pass
         self.con.close()
-        
-        
 def main():
     sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
     sock.bind(('',843))

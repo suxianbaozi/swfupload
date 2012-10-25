@@ -25,7 +25,7 @@ package org.httpclient {
   
   import org.httpclient.events.*;
   
-    import flash.external.ExternalInterface;
+  import flash.external.ExternalInterface;
   /**
    * HTTP Socket.
    *  
@@ -288,7 +288,6 @@ package org.httpclient {
     }
 
     private function onSecurityError(event:SecurityErrorEvent):void {
-      ExternalInterface.call("alert", "安全错误,无法得到安全认证文件!");
       if (_closed) return;
       close();
       _dispatcher.dispatchEvent(event.clone());
