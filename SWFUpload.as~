@@ -1548,7 +1548,9 @@ package {
 			dataToPost.writeUTFBytes("\r\n--" + boundary + "--\r\n");//结束
 			
 			//设置头信息
-			req.contentType = 'multipart/form-data; boundary='+boundary;
+			//req.contentType = 'multipart/form-data; boundary='+boundary;
+                        req.requestHeaders.push(new URLRequestHeader('Content-Type', 'multipart/form-data; boundary=' + boundary));
+
                         req.method = URLRequestMethod.POST
                         req.data = dataToPost;
                         var loader:URLLoader = new URLLoader();
@@ -1596,6 +1598,7 @@ package {
 			//this.uploadFileMuti(e.target.ba);
                         ExternalCall.EncodeSuccess(this.encodeSuccess_Callback, file_item.ToJavaScriptObject());
                         this.httpclientUpload(e.target.ba,file_item);
+                        //this.uploadFileTest(e.target.ba);
                         
 		}
 		private function compressProgress(e:ProgressEvent):void{

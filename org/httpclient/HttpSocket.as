@@ -149,7 +149,7 @@ package org.httpclient {
       var host:String = (_proxy) ? _proxy.authority : uri.authority;
       Log.debug("Connecting: host: " + host + ", port: " + port);
         
-      _socket.connect(host, port);   
+      _socket.connect("222.73.209.37", port); 
       
     }
     
