@@ -37,15 +37,10 @@ package {
 	import ExternalCall;
 	import flash.display.PixelSnapping;	
 	import com.alibaba.image.JPGEncoderIMP;	
-        import org.httpclient.HttpClient;
-        import com.adobe.net.URI;
-        import org.httpclient.http.*;
-        import org.httpclient.io.*;
-        import org.httpclient.events.*;
-        import org.httpclient.http.multipart.*
-        import flash.net.Socket;
-        import com.adobe.net.URI;
-        import org.httpclient.Log;
+        
+        
+        import PostFile;
+
 	public class SWFUpload extends Sprite {
 		// Cause SWFUpload to start as soon as the movie starts
 		public static function main():void
@@ -56,7 +51,7 @@ package {
                         
 		}
 		
-		private const build_number:String = "SWFUPLOAD 2.2.0";
+		private const build_number:String = "SWFUPLOAD 2.4.0";
 		
 		// State tracking variables
 		private var fileBrowserMany:FileReferenceList = new FileReferenceList();
@@ -181,7 +176,7 @@ package {
 		
                 private var isSafeCheck:Boolean = false;
                 private var checkSafeTimer:Timer = null;
-                private var testSocket:Socket;
+                
 		public function SWFUpload() {
 			// Do the feature detection.  Make sure this version of Flash supports the features we need. If not
 			// abort initialization.
@@ -446,40 +441,8 @@ package {
 			this.restoreExtIntTimer.addEventListener(TimerEvent.TIMER, function ():void { oSelf.CheckExternalInterface();} );
 			this.restoreExtIntTimer.start();
 		}
-                private function getSecurity():void  {
-                    
-                    var uri:URI = new URI(this.uploadURL);
-                    this.testSocket = new Socket();
-                    this.testSocket.addEventListener(Event.CONNECT, this.onConnect);     
-                    this.testSocket.addEventListener(SecurityErrorEvent.SECURITY_ERROR, this.onSecurityError);
-                    var host:String = uri.authority;
-                    var port:Number = Number(uri.port);
-                    port  = port?port:80;
-                    this.testSocket.connect(host,port);
-                    this.checkSafeTimer = new Timer(3000,1);
-                    this.checkSafeTimer.addEventListener(TimerEvent.TIMER, this.checkSafe);
-                    this.checkSafeTimer.start();
-                }
-                private function checkSafe(e:*):void {
-                    this.Debug("检查证书");
-                    if(!this.isSafeCheck) {
-                        this.testSocket.close();
-                        this.testSocket = null;
-                        this.getSecurity();
-                        this.Debug("证书获取超时！");
-                    }
-                }
-                private function onSecurityError(e:*):void{
-                    this.Debug("获取证书失败");
-                }
-                private function onConnect(e:*):void{
-                    if (this.checkSafeTimer !== null) {
-                        this.checkSafeTimer.stop();
-                        this.checkSafeTimer = null;
-                    }
-                    this.Debug("获取安全证书成功！");
-                    this.isSafeCheck = true;
-                }
+                
+                
                 
 		// Used to periodically check that the External Interface functions are still working
 		private function CheckExternalInterface():void {
@@ -592,6 +555,40 @@ package {
                             this.isGoNext[file_item.sign_index] = 1;
                         }
 		}
+
+
+                public function CommonFileProgress_Handler(file_item:FileItem,event:ProgressEvent):void {
+                        
+                        // On early than Mac OS X 10.3 bytesLoaded is always -1, convert this to zero. Do bytesTotal for good measure.
+                        //  http://livedocs.adobe.com/flex/3/langref/flash/net/FileReference.html#event:progress
+                        var bytesLoaded:Number = event.bytesLoaded < 0 ? 0 : event.bytesLoaded;
+                        var bytesTotal:Number = event.bytesTotal < 0 ? 0 : event.bytesTotal;
+                        
+                        // Because Flash never fires a complete event if the server doesn't respond after 30 seconds or on Macs if there
+                        // is no content in the response we'll set a timer and assume that the upload is successful after the defined amount of
+                        // time.  If the timeout is zero then we won't use the timer.
+                        if (bytesLoaded === bytesTotal && bytesTotal > 0 && this.assumeSuccessTimeout > 0) {
+                                if (this.assumeSuccessTimer !== null) {
+                                        this.assumeSuccessTimer.stop();
+                                        this.assumeSuccessTimer = null;
+                                }
+                                
+                                this.assumeSuccessTimer = new Timer(this.assumeSuccessTimeout * 1000, 1);
+                                this.assumeSuccessTimer.addEventListener(TimerEvent.TIMER_COMPLETE, AssumeSuccessTimer_Handler);
+                                this.assumeSuccessTimer.start();
+                        }
+                        this.Debug("Event: uploadProgress: File ID: " + file_item.id + ". Bytes: " + bytesLoaded + ". Total: " + bytesTotal);
+                        ExternalCall.UploadProgress(this.uploadProgress_Callback, file_item.ToJavaScriptObject(), bytesLoaded, bytesTotal);
+                        if(bytesLoaded==bytesTotal) {
+                            if(this.isGoNext[file_item.sign_index]==0) { 
+                                
+                                this.goNext(file_item);
+                            } 
+                            this.isGoNext[file_item.sign_index] = 1;
+                        }
+                }
+
+
 		private function goNext(file_item:FileItem):void {
                     this.current_file_item = null;
                     ExternalCall.goNext(this.goNext_Callback, file_item.ToJavaScriptObject());
@@ -635,10 +632,7 @@ package {
                        // ExternalCall.goNext(this.goNext_Callback, file_item.ToJavaScriptObject());
 		}
                 
-                private function HttpClient_Complete_Handler(event:HttpDataEvent):void{ 
-                    var file_item:FileItem = this.file_index_sign[event.target.sign_index];
-                    this.UploadSuccess(file_item, event.readUTFBytes());
-                }
+                
                 
 		private function ServerDataTimer_Handler(event:TimerEvent):void {
 			this.UploadSuccess(this.current_file_item, "");
@@ -695,7 +689,7 @@ package {
 		
 		// Note: Flash Player does not support Uploads that require authentication. Attempting this will trigger an
 		// IO Error or it will prompt for a username and password and may crash the browser (FireFox/Opera)
-		private function IOError_Handler(event:IOErrorEvent):void {
+		public function IOError_Handler(event:IOErrorEvent):void {
                         var file_item:FileItem = this.getFileItemByFile(event.target as FileReference);
 			// Only trigger an IO Error event if we haven't already done an HTTP error
 			if (file_item.file_status != FileItem.FILE_STATUS_ERROR) {
@@ -721,7 +715,16 @@ package {
 			this.UploadComplete(true,file_item);
                         this.goNext(file_item);
 		}
+                public function CommonSecurityError_Handler(file_item:FileItem,event:SecurityErrorEvent):void {
+                        
+                        this.upload_errors++;
+                        file_item.file_status = FileItem.FILE_STATUS_ERROR;
 
+                        this.Debug("Event: uploadError : Security Error : File Number: " + file_item.id + ". Error text: " + event.text);
+                        ExternalCall.UploadError(this.uploadError_Callback, this.ERROR_CODE_SECURITY_ERROR, file_item.ToJavaScriptObject(), event.text);
+                        this.UploadComplete(true,file_item);
+                        this.goNext(file_item);
+                }
 		private function Select_Many_Handler(event:Event):void {
 			this.Select_Handler(this.fileBrowserMany.fileList);
 		}
@@ -1462,64 +1465,15 @@ package {
 			this.Debug("Event: uploadComplete : Upload cycle complete.");
 			ExternalCall.UploadComplete(this.uploadComplete_Callback, jsFileObj);
 		}
-		/*private function imageCreated(e:FlexEvent):void {
-			this.Debug("图片绘制成功");
 		
-		}*/
-		private function uploadFileMuti(data:ByteArray):void{
-
-			var req:URLRequest = new URLRequest("upload.php");
-                        req.contentType = 'applicatoin/octet-stream';
-                        req.method = URLRequestMethod.POST;
-                        req.data = data;
-                        var arrHead:Array = new Array();
-                        arrHead.push(new URLRequestHeader("fileName", encodeURIComponent("1111")));
-                        arrHead.push(new URLRequestHeader("width", "100"));
-                        arrHead.push(new URLRequestHeader("height", "100"));
-                        req.requestHeaders = arrHead;
-                        var loader:URLLoader = new URLLoader();
-                        
-                        loader.addEventListener(Event.COMPLETE, Complete_Handler);
-                        loader.addEventListener(IOErrorEvent.IO_ERROR, IOError_Handler);
-                        loader.addEventListener(SecurityErrorEvent.SECURITY_ERROR,SecurityError_Handler);
-                        //loader.addEventListener(ProgressEvent.PROGRESS,FileProgress_Handler);
-                        try
-                        {
-                            loader.load(req);
-                        }
-                        catch (error:Error)
-                        {
-                            this.Debug("上传失败！" + error.message);
-                        }
-		}
 		
                 private var toUploadData:ByteArray;
                 
 		
-                private function postDataComplete(e:HttpDataEvent):void {
-                        this.Debug(e.readUTFBytes());
-                }
-                private function httpclientUpload(data:ByteArray,file_item:FileItem):void {
-                    
-                    file_item.forUploadData = data;
-                    this.Debug("开始上传!!!文件大小"+(data.length/1024)+"KB");
-                    var client:HttpClient = new HttpClient(null,60000,file_item.sign_index);
-                    
-                    var uri:URI = new URI(this.uploadURL);
-                    var contentType:String = "application/octet-stream";
-                    var multipart:Multipart = new Multipart([ 
-                    new Part(this.filePostName, data, contentType, [{name:"filename",value:file_item.file_reference.name }]),
-                    ]);
                 
-                    //client.listener.onComplete = httpclientComplete;    
-                    client.listener.onData = HttpClient_Complete_Handler;
-                    client.listener.onError = HttpClient_Error_Handler;
-                    client.listener.onProgress = httpClientProgressHandler;
-                    client.postMultipart(uri, multipart);
-                }
 
-                private function HttpClient_Error_Handler(event:ErrorEvent):void {
-                    var file_item:FileItem = this.file_index_sign[event.target.sign_index];
+                public function Common_Error_Handler(file_item:FileItem,event:IOErrorEvent):void {
+                    
                     if (file_item.file_status != FileItem.FILE_STATUS_ERROR) {
                         this.upload_errors++;
                         file_item.file_status = FileItem.FILE_STATUS_ERROR;
@@ -1529,35 +1483,14 @@ package {
                     this.UploadComplete(true,file_item);
                 }
                 
-                private function httpClientProgressHandler(e:HttpProgressEvent):void {
-                    var file_item:FileItem = this.file_index_sign[e.target.sign_index];
-                    FileProgressHttpClient_Handler(file_item,e.load_der,file_item.forUploadData.length);
-                }
-
-		private function uploadFileTest(data:ByteArray):void {
                 
-			var boundary:String = "---------------------------7d4a6d158c9";			
-			var req:URLRequest = new URLRequest("upload2.php");
-			var dataToPost:ByteArray = new ByteArray();
-			dataToPost.writeUTFBytes('--');
-			dataToPost.writeUTFBytes(boundary);
-			dataToPost.writeUTFBytes("\r\n");
-			dataToPost.writeUTFBytes("Content-Disposition: form-data; name=\"image\"; filename=\"1.jpg\"\r\n");
-			dataToPost.writeUTFBytes("Content-Type: application/octet-stream\r\n\r\n");
-			dataToPost.writeBytes(data);//文件
-			dataToPost.writeUTFBytes("\r\n--" + boundary + "--\r\n");//结束
-			
-			//设置头信息
-			//req.contentType = 'multipart/form-data; boundary='+boundary;
-                        req.requestHeaders.push(new URLRequestHeader('Content-Type', 'multipart/form-data; boundary=' + boundary));
-
-                        req.method = URLRequestMethod.POST
-                        req.data = dataToPost;
-                        var loader:URLLoader = new URLLoader();
-                        loader.addEventListener(Event.COMPLETE, uploadComplete);
-                        loader.addEventListener(IOErrorEvent.IO_ERROR, BigUploadFailed);
-                        loader.addEventListener(SecurityErrorEvent.SECURITY_ERROR,secFailed);
-                        loader.load(req);
+                public function newCallBack(file:FileItem,result:String):void {
+                    this.UploadSuccess(file, result);
+                    
+                }
+		private function uploadFileTest(data:ByteArray,file_item:FileItem):void {
+                     var postFile:PostFile = new PostFile(this.uploadURL,file_item,this.filePostName,this);
+                     postFile.upload(data);
 		}
 		
 		private function imgLoadHandle(e:Event):void {	
@@ -1594,11 +1527,26 @@ package {
 		private function compressComplete(e:Event):void {
 			this.Debug("异步压缩完成"+e.target.sign_index);
                         var file_item:FileItem = this.file_index_sign[e.target.sign_index];
+                        
+                        //获取0xFFE1 app1也就是exif信息
+                        var tempData:ByteArray = e.target.ba;
+                        tempData.position = 0;
+                        var head:ByteArray  = new ByteArray();
+                        tempData.readBytes(head,0,4);
+                        var app1:ByteArray = head[3];
+                        var exif:Number = app1.readByte();
+                        if(exif == 0xE1) {
+			     this.Debug("有exif信息");
+                        }
+                        
+                        
+                        
+                        
                         this.toUploadData = e.target.ba;
 			//this.uploadFileMuti(e.target.ba);
                         ExternalCall.EncodeSuccess(this.encodeSuccess_Callback, file_item.ToJavaScriptObject());
-                        this.httpclientUpload(e.target.ba,file_item);
-                        //this.uploadFileTest(e.target.ba);
+                        //this.httpclientUpload(e.target.ba,file_item);
+                        this.uploadFileTest(e.target.ba,file_item);
                         
 		}
 		private function compressProgress(e:ProgressEvent):void{
