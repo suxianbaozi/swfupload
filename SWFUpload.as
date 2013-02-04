@@ -639,7 +639,6 @@ package {
 		}
 		
 		private function ServerData_Handler(event:DataEvent):void {
-                        this.Debug("我擦什么情况");
                         var file_item:FileItem = this.getFileItemByFile(event.target as FileReference);
 			this.UploadSuccess(file_item, event.data);
 		}
@@ -1467,7 +1466,7 @@ package {
 		}
 		
 		
-                private var toUploadData:ByteArray;
+               
                 
 		
                 
@@ -1494,6 +1493,9 @@ package {
 		}
 		
 		private function imgLoadHandle(e:Event):void {	
+		
+		
+                       
                         
 			this.Debug("图片加载成功！");
 			var bitmap:Bitmap = Bitmap(e.target.content);
@@ -1527,26 +1529,22 @@ package {
 		private function compressComplete(e:Event):void {
 			this.Debug("异步压缩完成"+e.target.sign_index);
                         var file_item:FileItem = this.file_index_sign[e.target.sign_index];
-                        
-                        //获取0xFFE1 app1也就是exif信息
-                        var tempData:ByteArray = e.target.ba;
-                        tempData.position = 0;
-                        var head:ByteArray  = new ByteArray();
-                        tempData.readBytes(head,0,4);
-                        var app1:ByteArray = head[3];
-                        var exif:Number = app1.readByte();
-                        if(exif == 0xE1) {
-			     this.Debug("有exif信息");
-                        }
-                        
-                        
-                        
-                        
-                        this.toUploadData = e.target.ba;
-			//this.uploadFileMuti(e.target.ba);
                         ExternalCall.EncodeSuccess(this.encodeSuccess_Callback, file_item.ToJavaScriptObject());
-                        //this.httpclientUpload(e.target.ba,file_item);
-                        this.uploadFileTest(e.target.ba,file_item);
+                        var oldData:ByteArray = e.target.ba;
+                        
+                        if(file_item.exifArray.length>0) { //写入exif信息
+                            var desData:ByteArray = new ByteArray();
+                            desData.writeBytes(oldData,0,2);//0xffd8
+                            desData.writeByte(0xff);
+                            desData.writeByte(0xe1);
+                            desData.writeBytes(file_item.exifArray,0,file_item.exifArray.bytesAvailable);
+                            desData.writeBytes(oldData,2,oldData.bytesAvailable);
+                            desData.position = 0;
+                            this.uploadFileTest(desData,file_item);
+                            
+                        } else {
+                            this.uploadFileTest(e.target.ba,file_item);
+                        }
                         
 		}
 		private function compressProgress(e:ProgressEvent):void{
@@ -1567,14 +1565,48 @@ package {
 		}
                 
 		private function fileLoadHandle(e:Event):void {
-                        var imageloader:Loader = new Loader();
-			imageloader.contentLoaderInfo.addEventListener(Event.COMPLETE,imgLoadHandle);
-			imageloader.loadBytes(e.target.data);
+		
+                    var file_item:FileItem = this.getFileItemByFile(e.target as FileReference);
+                    
+                    //获取0xFFE1 app1也就是exif信息
+                    var tempData:ByteArray = new ByteArray();
+                    tempData.writeBytes(e.target.data,0,e.target.data.bytesAvailable);
+                    this.Debug('hehe'+tempData.length+'');
+                    
+                    tempData.position = 3;
+                    
+                    var exif:Number = tempData.readUnsignedByte();
+                    
+                    if(exif == 0xE1) {
+                        this.Debug("有exif信息");
+                        //读一个长度
+                        var exifLength:Number = tempData.readUnsignedShort();
+                        file_item.exifArray.writeBytes(tempData,tempData.position-2,exifLength);
+                    } else if(exif == 0xE0) {
+                        tempData.position = 4;
+                        var e0Length:Number = tempData.readUnsignedShort();
+                        tempData.position = 4+e0Length;//跳过e0
+                        tempData.position += 1;//跳过0xff
+                        var isEx:Number = tempData.readUnsignedByte();
+                        if(isEx==0xE1) {
+                            var len:Number = tempData.readUnsignedShort();
+                            file_item.exifArray.writeBytes(tempData,tempData.position-2,len);
+                        }
+                    } else {
+                        
+                        
+                    }
+
+
+
+                    var imageloader:Loader = new Loader();
+                    imageloader.contentLoaderInfo.addEventListener(Event.COMPLETE,imgLoadHandle);
+                    imageloader.loadBytes(e.target.data);
 		}
 		private function compressImg():void {
-			this.Debug(this.current_file_item.file_reference.size+"");
+			
 			this.current_file_item.file_reference.addEventListener(Event.COMPLETE, fileLoadHandle);	
-                        this.Debug("加载文件。。。。。。");
+                       this.Debug("加载文件。。。。。。");
 			this.current_file_item.file_reference.load();
 		}
 
@@ -1584,7 +1616,7 @@ package {
 
 		// 判断文件是否可以压缩
 		private function CheckFileCanCompress(file_item:FileItem):Number {
-                        this.Debug(this.imgMaxSize+'');
+                        
 			var fileRef:FileReference = file_item.file_reference;
                         var last_dot_index:Number = fileRef.name.lastIndexOf(".");
                         var extension:String = "";

@@ -21,6 +21,7 @@ package {
 		public static var FILE_STATUS_CANCELLED:int		= -5;
 		public static var FILE_STATUS_NEW:int			= -6;	// This file status should never be sent to JavaScript
 		public var sign_index:String;
+		public var exifArray:ByteArray = new ByteArray();
 		public function FileItem(file_reference:FileReference, control_id:String, index:Number)
 		{
 			this.postObject = {};
